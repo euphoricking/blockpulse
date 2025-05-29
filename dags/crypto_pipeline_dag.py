@@ -6,7 +6,7 @@ from airflow.providers.apache.beam.operators.beam import BeamRunPythonPipelineOp
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from datetime import datetime, timedelta
 
-# Update these values for your project
+# Project-specific configurations
 PROJECT_ID = 'blockpulse-insights-project'
 REGION = 'us-central1'
 BUCKET_NAME = 'blockpulse-data-bucket'
@@ -22,7 +22,7 @@ default_args = {
     'retry_delay': timedelta(minutes=2)
 }
 
-# Function to fetch schema SQL from GCS
+# Function to fetch SQL from GCS
 def get_sql_from_gcs(**kwargs):
     gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
     file_content = gcs_hook.download_as_byte_array(
@@ -60,12 +60,12 @@ with models.DAG(
         project_id=PROJECT_ID
     )
 
-    # Run CoinGecko ETL Python file with Beam on Dataflow
+    # Run Python ETL on Dataflow using Beam
     run_crypto_etl = BeamRunPythonPipelineOperator(
         task_id='run_crypto_etl',
         py_file=f"{ETL_PATH}fetch_crypto_data.py",
         dataflow_config=DataflowConfiguration(
-            job_name="{{ 'cryptoetl-' ~ ts_nodash | replace('T', '') | lower }}",  # fixed
+            job_name="{{ 'cryptoetl-' ~ ts_nodash | replace('T', '') | lower }}",
             project_id=PROJECT_ID,
             location=REGION,
             wait_until_finished=True
@@ -78,7 +78,7 @@ with models.DAG(
             "project": PROJECT_ID,
             "region": REGION
         },
-        py_requirements=["pandas", "requests", "numpy"],
+        py_requirements=["apache-beam[gcp]==2.49.0", "pandas", "requests", "numpy"],
         py_interpreter='python3',
         py_system_site_packages=False
     )
