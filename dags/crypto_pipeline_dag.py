@@ -6,45 +6,48 @@ from airflow.providers.apache.beam.operators.beam import BeamRunPythonPipelineOp
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from datetime import datetime, timedelta
 
-# Project-specific config
+# Update these values for your project
 PROJECT_ID = 'blockpulse-insights-project'
 REGION = 'us-central1'
 BUCKET_NAME = 'blockpulse-data-bucket'
 TEMP_LOCATION = f'gs://{BUCKET_NAME}/temp/'
 STAGING_LOCATION = f'gs://{BUCKET_NAME}/staging/'
-ETL_PATH = f'gs://{BUCKET_NAME}/etl/fetch_crypto_data.py'
+ETL_PATH = f'gs://{BUCKET_NAME}/etl/'
 SQL_FILE_PATH = 'sql/create_tables.sql'
 
 default_args = {
     'owner': 'you',
     'start_date': datetime(2025, 1, 1),
     'retries': 1,
-    'retry_delay': timedelta(minutes=2),
+    'retry_delay': timedelta(minutes=2)
 }
 
-# Function to fetch SQL file from GCS
+# Function to fetch schema SQL from GCS
 def get_sql_from_gcs(**kwargs):
     gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
-    return gcs_hook.download_as_byte_array(
+    file_content = gcs_hook.download_as_byte_array(
         bucket_name=BUCKET_NAME,
         object_name=SQL_FILE_PATH
     ).decode('utf-8')
+    return file_content
 
 with models.DAG(
     dag_id='crypto_etl_dag',
     default_args=default_args,
     schedule_interval='@daily',
     catchup=False,
-    description='Crypto ETL DAG using Dataflow + BigQuery'
+    description='Daily CoinGecko pipeline using Dataflow and BigQuery'
 ) as dag:
 
     start = EmptyOperator(task_id='start')
 
+    # Pull SQL from GCS
     fetch_sql = PythonOperator(
         task_id='fetch_sql',
         python_callable=get_sql_from_gcs
     )
 
+    # Create BQ tables
     create_star_schema = BigQueryInsertJobOperator(
         task_id='create_star_schema',
         configuration={
@@ -57,14 +60,15 @@ with models.DAG(
         project_id=PROJECT_ID
     )
 
+    # Run CoinGecko ETL Python file with Beam on Dataflow
     run_crypto_etl = BeamRunPythonPipelineOperator(
         task_id='run_crypto_etl',
-        py_file=ETL_PATH,
+        py_file=f"{ETL_PATH}fetch_crypto_data.py",
         dataflow_config=DataflowConfiguration(
-            job_name="cryptoetl-{{ ts_nodash | lower }}",
+            job_name="{{ 'cryptoetl-' ~ ts_nodash | replace('T', '') | lower }}",  # fixed
             project_id=PROJECT_ID,
             location=REGION,
-            wait_until_finished=True,
+            wait_until_finished=True
         ),
         gcp_conn_id='google_cloud_default',
         runner='DataflowRunner',
@@ -74,9 +78,9 @@ with models.DAG(
             "project": PROJECT_ID,
             "region": REGION
         },
-        py_requirements=["pandas", "requests", "numpy"],  # Beam auto-installed in Dataflow
+        py_requirements=["pandas", "requests", "numpy"],
         py_interpreter='python3',
-        py_system_site_packages=False,
+        py_system_site_packages=False
     )
 
     end = EmptyOperator(task_id='end')
