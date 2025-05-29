@@ -65,7 +65,7 @@ with models.DAG(
         task_id='run_crypto_etl',
         py_file=f"{ETL_PATH}fetch_crypto_data.py",
         dataflow_config=DataflowConfiguration(
-            job_name=f"cryptoetl-{{{{ ts_nodash | replace('T', '') | lower }}}}",  # fixed
+            job_name="{{ 'cryptoetl-' ~ ts_nodash | replace('T', '') | lower }}",  # fixed
             project_id=PROJECT_ID,
             location=REGION,
             wait_until_finished=True
