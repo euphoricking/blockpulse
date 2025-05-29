@@ -14,7 +14,7 @@ steps:
 - name: 'gcr.io/cloud-builders/gsutil'
   args: ['-m', 'cp', '-r', 'sql/*', 'gs://blockpulse-data-bucket/sql/']
 
-## Upload documentation (README, etc.)
+# Upload documentation (README, etc.)
 - name: 'gcr.io/cloud-builders/gsutil'
   args: ['-m', 'cp', 'README.md', 'docs/README_addendum.md', 'gs://blockpulse-data-bucket/docs/']
 
