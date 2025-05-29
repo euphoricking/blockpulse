@@ -4,7 +4,7 @@ options:
 steps:
 # Upload DAG files to Cloud Composer DAG bucket
 - name: 'gcr.io/cloud-builders/gsutil'
-  args: ['-m', 'cp', '-r', 'dags/*', 'gs://us-central1-blockpulse-cryp-5e9b742e-bucket/dags/']
+  args: ['-m', 'cp', '-r', 'dags/*', 'gs://us-central1-blockpulse-cryp-b9267167-bucket/dags/']
 
 # Upload ETL scripts to match the ETL_PATH in DAG
 - name: 'gcr.io/cloud-builders/gsutil'
