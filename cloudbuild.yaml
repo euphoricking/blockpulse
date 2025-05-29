@@ -6,9 +6,9 @@ steps:
 - name: 'gcr.io/cloud-builders/gsutil'
   args: ['-m', 'cp', '-r', 'dags/*', 'gs://us-central1-blockpulse-cryp-2117bb68-bucket/dags/']
 
-# Upload ETL scripts to Cloud Composer script folder
+# Upload ETL scripts to match the ETL_PATH in DAG
 - name: 'gcr.io/cloud-builders/gsutil'
-  args: ['-m', 'cp', '-r', 'scripts/*', 'gs://us-central1-blockpulse-cryp-2117bb68-bucket/dags/scripts/']
+  args: ['-m', 'cp', '-r', 'scripts/*', 'gs://blockpulse-data-bucket/etl/']
 
 # Upload BigQuery schema SQL
 - name: 'gcr.io/cloud-builders/gsutil'
@@ -29,4 +29,4 @@ steps:
 # Optional: Success message
 - name: 'alpine'
   entrypoint: 'echo'
-  args: ['Deployment complete: DAGs, scripts, SQL, and docs uploaded to GCS.']
+  args: ['Deployment complete: DAGs, ETL scripts, SQL, and docs uploaded to GCS.']
