@@ -1,53 +1,53 @@
-# *.pyc
-# __pycache__/
-# .env
-
-# Python bytecode
+*.pyc
 __pycache__/
-*.py[cod]
-*$py.class
-
-# Jupyter and IPython
-.ipynb_checkpoints/
-
-# Environment files
 .env
-.venv/
-venv/
-*.env
 
-# macOS system files
-.DS_Store
+# # Python bytecode
+# __pycache__/
+# *.py[cod]
+# *$py.class
 
-# VSCode settings
-.vscode/
+# # Jupyter and IPython
+# .ipynb_checkpoints/
 
-# Output logs
-logs/
-*.log
+# # Environment files
+# .env
+# .venv/
+# venv/
+# *.env
 
-# Airflow & Beam
-*.airflow/
-airflow.db
-unittest.cfg
+# # macOS system files
+# .DS_Store
 
-# Beam intermediate outputs (just in case)
-*.tmp
-*.temp
+# # VSCode settings
+# .vscode/
 
-# GCP credentials (DO NOT commit!)
-credentials.json
-gcloud_key.json
+# # Output logs
+# logs/
+# *.log
 
-# Data files
-*.csv
-*.json
-*.parquet
+# # Airflow & Beam
+# *.airflow/
+# airflow.db
+# unittest.cfg
 
-# Temporary files
-*.bak
-*.swp
-*.zip
+# # Beam intermediate outputs (just in case)
+# *.tmp
+# *.temp
 
-# Cloud Composer DAG bucket mirror (optional)
-dags.zip
+# # GCP credentials (DO NOT commit!)
+# credentials.json
+# gcloud_key.json
+
+# # Data files
+# *.csv
+# *.json
+# *.parquet
+
+# # Temporary files
+# *.bak
+# *.swp
+# *.zip
+
+# # Cloud Composer DAG bucket mirror (optional)
+# dags.zip

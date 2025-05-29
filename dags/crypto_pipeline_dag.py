@@ -22,7 +22,7 @@ default_args = {
     'retry_delay': timedelta(minutes=2)
 }
 
-# Function to fetch schema SQL from GCS
+## Function to fetch schema SQL from GCS
 def get_sql_from_gcs(**kwargs):
     gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
     file_content = gcs_hook.download_as_byte_array(
