@@ -1,0 +1,32 @@
+options:
+  logging: CLOUD_LOGGING_ONLY
+
+steps:
+# Upload DAG files to Cloud Composer DAG bucket
+- name: 'gcr.io/cloud-builders/gsutil'
+  args: ['-m', 'cp', '-r', 'dags/*', 'gs://blockpulse-composer-bucket/dags/']
+
+# Upload ETL scripts to Cloud Composer script folder
+- name: 'gcr.io/cloud-builders/gsutil'
+  args: ['-m', 'cp', '-r', 'scripts/*', 'gs://blockpulse-composer-bucket/dags/scripts/']
+
+# Upload BigQuery schema SQL
+- name: 'gcr.io/cloud-builders/gsutil'
+  args: ['-m', 'cp', '-r', 'sql/*', 'gs://blockpulse-data-bucket/sql/']
+
+# Upload documentation (README, etc.)
+- name: 'gcr.io/cloud-builders/gsutil'
+  args: ['-m', 'cp', 'README.md', 'docs/README_addendum.md', 'gs://blockpulse-data-bucket/docs/']
+
+# Upload requirements.txt for traceability (optional)
+- name: 'gcr.io/cloud-builders/gsutil'
+  args: ['cp', 'requirements.txt', 'gs://blockpulse-data-bucket/requirements/']
+
+# Upload cloudbuild.yaml itself for auditing
+- name: 'gcr.io/cloud-builders/gsutil'
+  args: ['cp', 'cloudbuild.yaml', 'gs://blockpulse-data-bucket/configs/']
+
+# Optional: Success message
+- name: 'alpine'
+  entrypoint: 'echo'
+  args: ['✅ Deployment complete: DAGs, scripts, SQL, and docs uploaded to GCS.']
