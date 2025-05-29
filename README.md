@@ -116,3 +116,4 @@ coingecko-pipeline/
 ## 📄 License
 
 This project is licensed under the MIT License. Feel free to adapt and extend for your own use.
+# blockpulse
