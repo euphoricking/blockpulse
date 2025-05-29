@@ -13,9 +13,12 @@ class GenerateDateDimension(beam.DoFn):
             yield {
                 'date': current.strftime('%Y-%m-%d'),
                 'year': current.year,
+                'quarter': (current.month - 1) // 3 + 1,
                 'month': current.month,
+                'month_name': current.strftime('%B'),
                 'day': current.day,
-                'day_of_week': current.strftime('%A')
+                'day_of_week': current.strftime('%A'),
+                'week_of_year': current.isocalendar()[1]
             }
 
 def run():
@@ -23,12 +26,12 @@ def run():
     options.view_as(SetupOptions).save_main_session = True
 
     output_path = 'gs://blockpulse-data-bucket/dimensions/date_dim.csv'
-    csv_fields = ['date', 'year', 'month', 'day', 'day_of_week']
+    csv_fields = ['date', 'year', 'quarter', 'month', 'month_name', 'day', 'day_of_week', 'week_of_year']
 
     with beam.Pipeline(options=options) as pipeline:
         (
             pipeline
-            | 'CreateSeed' >> beam.Create([None])
+            | 'CreateInit' >> beam.Create([None])
             | 'GenerateDates' >> beam.ParDo(GenerateDateDimension())
             | 'ToCSV' >> beam.Map(lambda row: ','.join([str(row.get(col, '')) for col in csv_fields]))
             | 'WriteToGCS' >> beam.io.WriteToText(

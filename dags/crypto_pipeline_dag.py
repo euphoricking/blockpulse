@@ -16,7 +16,7 @@ ETL_PATH = f'gs://{BUCKET_NAME}/etl/'
 SQL_FILE_PATH = 'sql/create_tables.sql'
 
 default_args = {
-    'owner': 'you',
+    'owner': 'Leo',
     'start_date': datetime(2025, 1, 1),
     'retries': 1,
     'retry_delay': timedelta(minutes=2)
@@ -36,7 +36,7 @@ with models.DAG(
     default_args=default_args,
     schedule_interval='@daily',
     catchup=False,
-    description='Daily CoinGecko pipeline using Dataflow and BigQuery'
+    description='BlockPulse: Cloud Data Pipeline for Daily Crypto Market Intelligence'
 ) as dag:
 
     start = EmptyOperator(task_id='start')

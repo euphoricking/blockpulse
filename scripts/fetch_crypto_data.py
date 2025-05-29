@@ -1,10 +1,10 @@
 import apache_beam as beam
-from apache_beam.options.pipeline_options import PipelineOptions, GoogleCloudOptions, StandardOptions
-import requests
+from apache_beam.options.pipeline_options import PipelineOptions, StandardOptions
 from datetime import datetime
+import requests
 
 
-class FetchCryptoData(beam.DoFn):
+class FetchCryptoMarketSnapshot(beam.DoFn):
     def process(self, element):
         url = 'https://api.coingecko.com/api/v3/coins/markets'
         params = {
@@ -20,38 +20,56 @@ class FetchCryptoData(beam.DoFn):
             data = response.json()
             for record in data:
                 yield {
-                    'name': record.get('name'),
+                    'coin_id': record.get('id'),
                     'symbol': record.get('symbol'),
-                    'price': float(record.get('current_price')),
-                    'market_cap': float(record.get('market_cap')),
-                    'timestamp': datetime.utcnow().isoformat()
+                    'name': record.get('name'),
+                    'price': record.get('current_price'),
+                    'market_cap': record.get('market_cap'),
+                    'total_volume': record.get('total_volume'),
+                    'price_change_percentage_24h': record.get('price_change_percentage_24h'),
+                    'market_cap_change_percentage_24h': record.get('market_cap_change_percentage_24h'),
+                    'high_24h': record.get('high_24h'),
+                    'low_24h': record.get('low_24h'),
+                    'circulating_supply': record.get('circulating_supply'),
+                    'total_supply': record.get('total_supply'),
+                    'max_supply': record.get('max_supply'),
+                    'ath': record.get('ath'),
+                    'ath_date': record.get('ath_date'),
+                    'atl': record.get('atl'),
+                    'atl_date': record.get('atl_date'),
+                    'snapshot_date': datetime.utcnow().strftime('%Y-%m-%d')
                 }
         else:
             raise Exception(f"Failed to fetch data: {response.status_code}, {response.text}")
 
 
 def run():
-    pipeline_options = PipelineOptions()
-    pipeline_options.view_as(StandardOptions).runner = 'DataflowRunner'
+    options = PipelineOptions()
+    options.view_as(StandardOptions).runner = 'DataflowRunner'
 
-    p = beam.Pipeline(options=pipeline_options)
+    output_table = 'blockpulse-insights-project.crypto_data.crypto_market_snapshot_fact'
 
-    (
-        p
-        | 'Init' >> beam.Create([None])
-        | 'FetchCryptoData' >> beam.ParDo(FetchCryptoData())
-        | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
-            table='blockpulse-insights-project.crypto_dataset.crypto_prices',
-            schema='name:STRING,symbol:STRING,price:FLOAT,market_cap:FLOAT,timestamp:TIMESTAMP',
-            write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
-            create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
-            custom_gcs_temp_location='gs://blockpulse-data-bucket/temp/',
-            method='STREAMING_INSERTS'
-        )
+    schema = (
+        'coin_id:STRING, symbol:STRING, name:STRING, price:FLOAT, market_cap:FLOAT, '
+        'total_volume:FLOAT, price_change_percentage_24h:FLOAT, market_cap_change_percentage_24h:FLOAT, '
+        'high_24h:FLOAT, low_24h:FLOAT, circulating_supply:FLOAT, total_supply:FLOAT, max_supply:FLOAT, '
+        'ath:FLOAT, ath_date:TIMESTAMP, atl:FLOAT, atl_date:TIMESTAMP, snapshot_date:DATE'
     )
 
-    p.run()
-
+    with beam.Pipeline(options=options) as pipeline:
+        (
+            pipeline
+            | 'Start' >> beam.Create([None])
+            | 'FetchMarketData' >> beam.ParDo(FetchCryptoMarketSnapshot())
+            | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
+                table=output_table,
+                schema=schema,
+                write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
+                create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
+                custom_gcs_temp_location='gs://blockpulse-data-bucket/temp/',
+                method='STREAMING_INSERTS'
+            )
+        )
 
 if __name__ == '__main__':
     run()
