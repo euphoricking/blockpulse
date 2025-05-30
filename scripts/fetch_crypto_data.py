@@ -1,8 +1,8 @@
 import apache_beam as beam
-from apache_beam.options.pipeline_options import PipelineOptions, StandardOptions
-from datetime import datetime
+from apache_beam.options.pipeline_options import PipelineOptions
+from datetime import datetime, timezone
 import requests
-
+import logging
 
 class FetchCryptoMarketSnapshot(beam.DoFn):
     def process(self, element):
@@ -15,61 +15,99 @@ class FetchCryptoMarketSnapshot(beam.DoFn):
             'sparkline': False
         }
 
-        response = requests.get(url, params=params)
-        if response.status_code == 200:
+        logging.info("Sending request to CoinGecko API...")
+
+        try:
+            response = requests.get(url, params=params, timeout=60)
+            logging.info(f"Response status: {response.status_code}")
+            response.raise_for_status()
             data = response.json()
+
+            current_date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+            logging.info(f"Fetched {len(data)} records")
+
             for record in data:
-                yield {
-                    'coin_id': record.get('id'),
-                    'symbol': record.get('symbol'),
-                    'name': record.get('name'),
-                    'price': record.get('current_price'),
-                    'market_cap': record.get('market_cap'),
-                    'total_volume': record.get('total_volume'),
-                    'price_change_percentage_24h': record.get('price_change_percentage_24h'),
-                    'market_cap_change_percentage_24h': record.get('market_cap_change_percentage_24h'),
-                    'high_24h': record.get('high_24h'),
-                    'low_24h': record.get('low_24h'),
-                    'circulating_supply': record.get('circulating_supply'),
-                    'total_supply': record.get('total_supply'),
-                    'max_supply': record.get('max_supply'),
-                    'ath': record.get('ath'),
-                    'ath_date': record.get('ath_date'),
-                    'atl': record.get('atl'),
-                    'atl_date': record.get('atl_date'),
-                    'snapshot_date': datetime.utcnow().strftime('%Y-%m-%d')
+                row = {
+                    'coin_id': str(record.get('id')),
+                    'symbol': str(record.get('symbol')),
+                    'name': str(record.get('name')),
+                    'price': float(record.get('current_price', 0)),
+                    'market_cap': float(record.get('market_cap', 0)),
+                    'total_volume': float(record.get('total_volume', 0)),
+                    'price_change_percentage_24h': float(record.get('price_change_percentage_24h', 0)),
+                    'market_cap_change_percentage_24h': float(record.get('market_cap_change_percentage_24h', 0)),
+                    'high_24h': float(record.get('high_24h', 0)),
+                    'low_24h': float(record.get('low_24h', 0)),
+                    'circulating_supply': float(record.get('circulating_supply', 0)),
+                    'total_supply': float(record.get('total_supply', 0)),
+                    'max_supply': float(record.get('max_supply', 0)),
+                    'ath': float(record.get('ath', 0)),
+                    'ath_date': str(record.get('ath_date', '')),
+                    'atl': float(record.get('atl', 0)),
+                    'atl_date': str(record.get('atl_date', '')),
+                    'snapshot_date': current_date,
+                    'processing_time': current_date
                 }
-        else:
-            raise Exception(f"Failed to fetch data: {response.status_code}, {response.text}")
+                logging.info(f"Yielding record for coin: {row['name']}")
+                yield row
+
+        except Exception as e:
+            logging.error(f"Error fetching data: {str(e)}")
+            raise
 
 
 def run():
-    options = PipelineOptions()
-    options.view_as(StandardOptions).runner = 'DataflowRunner'
+    options = PipelineOptions(
+        runner='DataflowRunner',
+        project='blockpulse-insights-project',
+        region='us-central1',
+        temp_location='gs://blockpulse-data-bucket/temp/',
+        staging_location='gs://blockpulse-data-bucket/staging/',
+        setup_file='./setup.py',  # Will be bundled during submission
+        save_main_session=True
+    )
 
     output_table = 'blockpulse-insights-project.crypto_data.crypto_market_snapshot_fact'
 
-    schema = (
-        'coin_id:STRING, symbol:STRING, name:STRING, price:FLOAT, market_cap:FLOAT, '
-        'total_volume:FLOAT, price_change_percentage_24h:FLOAT, market_cap_change_percentage_24h:FLOAT, '
-        'high_24h:FLOAT, low_24h:FLOAT, circulating_supply:FLOAT, total_supply:FLOAT, max_supply:FLOAT, '
-        'ath:FLOAT, ath_date:TIMESTAMP, atl:FLOAT, atl_date:TIMESTAMP, snapshot_date:DATE'
-    )
+    schema = {
+        "fields": [
+            {"name": "coin_id", "type": "STRING"},
+            {"name": "symbol", "type": "STRING"},
+            {"name": "name", "type": "STRING"},
+            {"name": "price", "type": "FLOAT"},
+            {"name": "market_cap", "type": "FLOAT"},
+            {"name": "total_volume", "type": "FLOAT"},
+            {"name": "price_change_percentage_24h", "type": "FLOAT"},
+            {"name": "market_cap_change_percentage_24h", "type": "FLOAT"},
+            {"name": "high_24h", "type": "FLOAT"},
+            {"name": "low_24h", "type": "FLOAT"},
+            {"name": "circulating_supply", "type": "FLOAT"},
+            {"name": "total_supply", "type": "FLOAT"},
+            {"name": "max_supply", "type": "FLOAT"},
+            {"name": "ath", "type": "FLOAT"},
+            {"name": "ath_date", "type": "STRING"},
+            {"name": "atl", "type": "FLOAT"},
+            {"name": "atl_date", "type": "STRING"},
+            {"name": "snapshot_date", "type": "STRING"},
+            {"name": "processing_time", "type": "STRING"}
+        ]
+    }
 
     with beam.Pipeline(options=options) as pipeline:
         (
             pipeline
-            | 'Start' >> beam.Create([None])
+            | 'StartPipeline' >> beam.Create([None])
             | 'FetchMarketData' >> beam.ParDo(FetchCryptoMarketSnapshot())
             | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
                 table=output_table,
                 schema=schema,
                 write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND,
                 create_disposition=beam.io.BigQueryDisposition.CREATE_IF_NEEDED,
-                custom_gcs_temp_location='gs://blockpulse-data-bucket/temp/',
-                method='STREAMING_INSERTS'
+                custom_gcs_temp_location='gs://blockpulse-data-bucket/temp/'
             )
         )
 
+
 if __name__ == '__main__':
+    logging.getLogger().setLevel(logging.INFO)
     run()

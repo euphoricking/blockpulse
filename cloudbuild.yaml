@@ -18,9 +18,13 @@ steps:
 - name: 'gcr.io/cloud-builders/gsutil'
   args: ['-m', 'cp', 'README.md', 'docs/README_addendum.md', 'gs://blockpulse-data-bucket/docs/']
 
-# Upload requirements.txt for traceability (optional)
+# Upload requirements.txt for traceability
 - name: 'gcr.io/cloud-builders/gsutil'
   args: ['cp', 'requirements.txt', 'gs://blockpulse-data-bucket/requirements/']
+
+  # Upload setup.py for traceability
+- name: 'gcr.io/cloud-builders/gsutil'
+  args: ['cp', 'setup.py', 'gs://blockpulse-data-bucket/requirements/']
 
 # Upload cloudbuild.yaml itself for auditing
 - name: 'gcr.io/cloud-builders/gsutil'

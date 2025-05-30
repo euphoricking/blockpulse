@@ -12,17 +12,20 @@ REGION = 'us-central1'
 BUCKET_NAME = 'blockpulse-data-bucket'
 TEMP_LOCATION = f'gs://{BUCKET_NAME}/temp/'
 STAGING_LOCATION = f'gs://{BUCKET_NAME}/staging/'
-ETL_PATH = f'gs://{BUCKET_NAME}/etl/'
+ETL_PATH = f'gs://{BUCKET_NAME}/etl/fetch_crypto_data.py'
 SQL_FILE_PATH = 'sql/create_tables.sql'
+REQUIREMENTS_FILE = f'gs://{BUCKET_NAME}/requirements/requirements.txt'
+SETUP_FILE = f'gs://{BUCKET_NAME}/requirements/setup.py'
 
 default_args = {
     'owner': 'you',
     'start_date': datetime(2025, 1, 1),
     'retries': 1,
-    'retry_delay': timedelta(minutes=2)
+    'retry_delay': timedelta(minutes=2),
+    'email_on_failure': True,
+    'email_on_retry': False
 }
 
-# Function to fetch SQL from GCS
 def get_sql_from_gcs(**kwargs):
     gcs_hook = GCSHook(gcp_conn_id='google_cloud_default')
     file_content = gcs_hook.download_as_byte_array(
@@ -41,44 +44,44 @@ with models.DAG(
 
     start = EmptyOperator(task_id='start')
 
-    # Pull SQL from GCS
     fetch_sql = PythonOperator(
         task_id='fetch_sql',
-        python_callable=get_sql_from_gcs
+        python_callable=get_sql_from_gcs,
+        do_xcom_push=True
     )
 
-    # Create BQ star schema tables
     create_star_schema = BigQueryInsertJobOperator(
         task_id='create_star_schema',
         configuration={
             "query": {
                 "query": "{{ task_instance.xcom_pull(task_ids='fetch_sql') }}",
-                "useLegacySql": False
+                "useLegacySql": False,
+                "priority": "BATCH"
             }
         },
         location=REGION,
         project_id=PROJECT_ID
     )
 
-    # Run ETL Python pipeline on Dataflow
     run_crypto_etl = BeamRunPythonPipelineOperator(
         task_id='run_crypto_etl',
-        py_file=f"{ETL_PATH}fetch_crypto_data.py",
+        py_file=ETL_PATH,
         dataflow_config=DataflowConfiguration(
             job_name="{{ 'cryptoetl-' ~ ts_nodash | replace('T', '') | lower }}",
             project_id=PROJECT_ID,
             location=REGION,
-            wait_until_finished=True
+            wait_until_finished=True,
+            temp_location=TEMP_LOCATION,
+            staging_location=STAGING_LOCATION
         ),
         gcp_conn_id='google_cloud_default',
         runner='DataflowRunner',
         pipeline_options={
-            "tempLocation": TEMP_LOCATION,
-            "stagingLocation": STAGING_LOCATION,
             "project": PROJECT_ID,
             "region": REGION,
-            "requirements_file": "gs://blockpulse-data-bucket/requirements/requirements.txt"
         },
+        requirements_file=REQUIREMENTS_FILE,
+        setup_file=SETUP_FILE,
         py_interpreter='python3',
         py_system_site_packages=False
     )
