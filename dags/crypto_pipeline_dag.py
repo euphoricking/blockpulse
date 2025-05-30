@@ -77,7 +77,7 @@ with models.DAG(
             "stagingLocation": STAGING_LOCATION,
             "project": PROJECT_ID,
             "region": REGION,
-            "requirements_file": f"{ETL_PATH}requirements.txt"
+            "requirements_file": "gs://blockpulse-data-bucket/requirements/requirements.txt"
         },
         py_interpreter='python3',
         py_system_site_packages=False
