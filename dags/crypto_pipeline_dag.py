@@ -6,7 +6,7 @@ from airflow.providers.apache.beam.operators.beam import BeamRunPythonPipelineOp
 from airflow.providers.google.cloud.hooks.gcs import GCSHook
 from datetime import datetime, timedelta
 
-# Project-specific configurations
+# GCP configurations
 PROJECT_ID = 'blockpulse-insights-project'
 REGION = 'us-central1'
 BUCKET_NAME = 'blockpulse-data-bucket'
@@ -14,7 +14,6 @@ TEMP_LOCATION = f'gs://{BUCKET_NAME}/temp/'
 STAGING_LOCATION = f'gs://{BUCKET_NAME}/staging/'
 ETL_PATH = f'gs://{BUCKET_NAME}/etl/'
 SQL_FILE_PATH = 'sql/create_tables.sql'
-REQUIREMENTS_FILE = f'{ETL_PATH}requirements.txt'
 
 default_args = {
     'owner': 'you',
@@ -48,7 +47,7 @@ with models.DAG(
         python_callable=get_sql_from_gcs
     )
 
-    # Create BQ tables
+    # Create BQ star schema tables
     create_star_schema = BigQueryInsertJobOperator(
         task_id='create_star_schema',
         configuration={
@@ -61,11 +60,10 @@ with models.DAG(
         project_id=PROJECT_ID
     )
 
-    # Run Python ETL on Dataflow using Beam
+    # Run ETL Python pipeline on Dataflow
     run_crypto_etl = BeamRunPythonPipelineOperator(
         task_id='run_crypto_etl',
         py_file=f"{ETL_PATH}fetch_crypto_data.py",
-        requirements_file=REQUIREMENTS_FILE,  # Use requirements.txt instead of py_requirements
         dataflow_config=DataflowConfiguration(
             job_name="{{ 'cryptoetl-' ~ ts_nodash | replace('T', '') | lower }}",
             project_id=PROJECT_ID,
@@ -78,7 +76,8 @@ with models.DAG(
             "tempLocation": TEMP_LOCATION,
             "stagingLocation": STAGING_LOCATION,
             "project": PROJECT_ID,
-            "region": REGION
+            "region": REGION,
+            "requirements_file": f"{ETL_PATH}requirements.txt"
         },
         py_interpreter='python3',
         py_system_site_packages=False
