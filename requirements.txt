@@ -1,0 +1,6 @@
+apache-beam[gcp]==2.49.0
+requests
+pandas
+numpy
+google-cloud-bigquery
+google-cloud-storage

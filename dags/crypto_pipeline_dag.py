@@ -14,9 +14,10 @@ TEMP_LOCATION = f'gs://{BUCKET_NAME}/temp/'
 STAGING_LOCATION = f'gs://{BUCKET_NAME}/staging/'
 ETL_PATH = f'gs://{BUCKET_NAME}/etl/'
 SQL_FILE_PATH = 'sql/create_tables.sql'
+REQUIREMENTS_FILE = f'{ETL_PATH}requirements.txt'
 
 default_args = {
-    'owner': 'Leo',
+    'owner': 'you',
     'start_date': datetime(2025, 1, 1),
     'retries': 1,
     'retry_delay': timedelta(minutes=2)
@@ -36,7 +37,7 @@ with models.DAG(
     default_args=default_args,
     schedule_interval='@daily',
     catchup=False,
-    description='BlockPulse: Cloud Data Pipeline for Daily Crypto Market Intelligence'
+    description='Daily CoinGecko pipeline using Dataflow and BigQuery'
 ) as dag:
 
     start = EmptyOperator(task_id='start')
@@ -64,6 +65,7 @@ with models.DAG(
     run_crypto_etl = BeamRunPythonPipelineOperator(
         task_id='run_crypto_etl',
         py_file=f"{ETL_PATH}fetch_crypto_data.py",
+        requirements_file=REQUIREMENTS_FILE,  # Use requirements.txt instead of py_requirements
         dataflow_config=DataflowConfiguration(
             job_name="{{ 'cryptoetl-' ~ ts_nodash | replace('T', '') | lower }}",
             project_id=PROJECT_ID,
@@ -78,7 +80,6 @@ with models.DAG(
             "project": PROJECT_ID,
             "region": REGION
         },
-        py_requirements=["apache-beam[gcp]==2.49.0", "pandas", "requests", "numpy"],
         py_interpreter='python3',
         py_system_site_packages=False
     )
