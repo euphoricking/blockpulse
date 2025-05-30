@@ -12,9 +12,7 @@ REGION = 'us-central1'
 BUCKET_NAME = 'blockpulse-data-bucket'
 TEMP_LOCATION = f'gs://{BUCKET_NAME}/temp/'
 STAGING_LOCATION = f'gs://{BUCKET_NAME}/staging/'
-ETL_PATH = f'gs://{BUCKET_NAME}/etl/fetch_crypto_data.py'
-REQUIREMENTS_FILE = f'gs://{BUCKET_NAME}/requirements/requirements.txt'
-SETUP_FILE = f'gs://{BUCKET_NAME}/requirements/setup.py'
+ETL_PATH = f'gs://{BUCKET_NAME}/etl/fetch_crypto_data.py'  # Full path to the script
 SQL_FILE_PATH = 'sql/create_tables.sql'
 
 default_args = {
@@ -70,17 +68,17 @@ with models.DAG(
             job_name="{{ 'cryptoetl-' ~ ts_nodash | replace('T', '') | lower }}",
             project_id=PROJECT_ID,
             location=REGION,
-            wait_until_finished=True
+            wait_until_finished=True,
+            temp_location=TEMP_LOCATION,
+            staging_location=STAGING_LOCATION
         ),
         gcp_conn_id='google_cloud_default',
         runner='DataflowRunner',
         pipeline_options={
             "project": PROJECT_ID,
             "region": REGION,
-            "tempLocation": TEMP_LOCATION,
-            "stagingLocation": STAGING_LOCATION,
-            "requirementsFile": REQUIREMENTS_FILE,
-            "setupFile": SETUP_FILE
+            "requirements_file": f"gs://{BUCKET_NAME}/requirements/requirements.txt",
+            "setup_file": f"gs://{BUCKET_NAME}/requirements/setup.py"  # Optional if needed
         },
         py_interpreter='python3',
         py_system_site_packages=False

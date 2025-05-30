@@ -2,6 +2,7 @@ import apache_beam as beam
 from apache_beam.options.pipeline_options import PipelineOptions
 from datetime import datetime, timezone
 import requests
+import json
 import logging
 
 class FetchCryptoMarketSnapshot(beam.DoFn):
@@ -15,19 +16,15 @@ class FetchCryptoMarketSnapshot(beam.DoFn):
             'sparkline': False
         }
 
-        logging.info("Sending request to CoinGecko API...")
-
         try:
             response = requests.get(url, params=params, timeout=60)
-            logging.info(f"Response status: {response.status_code}")
             response.raise_for_status()
             data = response.json()
-
+            
             current_date = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
-            logging.info(f"Fetched {len(data)} records")
-
+            
             for record in data:
-                row = {
+                yield {
                     'coin_id': str(record.get('id')),
                     'symbol': str(record.get('symbol')),
                     'name': str(record.get('name')),
@@ -48,13 +45,9 @@ class FetchCryptoMarketSnapshot(beam.DoFn):
                     'snapshot_date': current_date,
                     'processing_time': current_date
                 }
-                logging.info(f"Yielding record for coin: {row['name']}")
-                yield row
-
         except Exception as e:
             logging.error(f"Error fetching data: {str(e)}")
             raise
-
 
 def run():
     options = PipelineOptions(
@@ -63,7 +56,7 @@ def run():
         region='us-central1',
         temp_location='gs://blockpulse-data-bucket/temp/',
         staging_location='gs://blockpulse-data-bucket/staging/',
-        setup_file='./setup.py',  # Will be bundled during submission
+        setup_file='gs://blockpulse-data-bucket/requirements/setup.py',
         save_main_session=True
     )
 
@@ -96,7 +89,7 @@ def run():
     with beam.Pipeline(options=options) as pipeline:
         (
             pipeline
-            | 'StartPipeline' >> beam.Create([None])
+            | 'Start' >> beam.Create([None])
             | 'FetchMarketData' >> beam.ParDo(FetchCryptoMarketSnapshot())
             | 'WriteToBigQuery' >> beam.io.WriteToBigQuery(
                 table=output_table,
@@ -106,7 +99,6 @@ def run():
                 custom_gcs_temp_location='gs://blockpulse-data-bucket/temp/'
             )
         )
-
 
 if __name__ == '__main__':
     logging.getLogger().setLevel(logging.INFO)
