@@ -12,7 +12,7 @@ REGION = 'us-central1'
 BUCKET_NAME = 'blockpulse-data-bucket'
 TEMP_LOCATION = f'gs://{BUCKET_NAME}/temp/'
 STAGING_LOCATION = f'gs://{BUCKET_NAME}/staging/'
-ETL_PATH = f'gs://{BUCKET_NAME}/etl/fetch_crypto_data.py'  # Full path to the script
+ETL_PATH = f'gs://{BUCKET_NAME}/etl/fetch_crypto_data.py'
 REQUIREMENTS_FILE = f'gs://{BUCKET_NAME}/requirements/requirements.txt'
 SETUP_FILE = f'gs://{BUCKET_NAME}/requirements/setup.py'
 SQL_FILE_PATH = 'sql/create_tables.sql'
@@ -78,10 +78,10 @@ with models.DAG(
             "project": PROJECT_ID,
             "region": REGION,
             "tempLocation": TEMP_LOCATION,
-            "stagingLocation": STAGING_LOCATION
+            "stagingLocation": STAGING_LOCATION,
+            "requirementsFile": REQUIREMENTS_FILE,
+            "setupFile": SETUP_FILE
         },
-        requirements_file=REQUIREMENTS_FILE,
-        setup_file=SETUP_FILE,
         py_interpreter='python3',
         py_system_site_packages=False
     )
