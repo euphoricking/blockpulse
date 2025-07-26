@@ -41,7 +41,7 @@ def load_csv_from_gcs(project: str, dataset: str, table: str, gcs_uri: str) -> N
         source_format=bigquery.SourceFormat.CSV,
         skip_leading_rows=1,
         autodetect=True,
-            write_disposition=bigquery.WriteDisposition.WRITE_TRUNCATE,
+        write_disposition=bigquery.WriteDisposition.WRITE_APPEND,
     )
     load_job = client.load_table_from_uri(gcs_uri, table_ref, job_config=job_config)
     print(f"Starting load job: {load_job.job_id}")

@@ -1,13 +1,13 @@
 -- Stored procedure to upsert new dates into the date dimension.
 -- Replace `{{ dataset }}` with your BigQuery dataset name before executing.
 
-CREATE OR REPLACE PROCEDURE `crypto_dw.sp_upsert_date_dim`()
+CREATE OR REPLACE PROCEDURE `{{ dataset }}.sp_upsert_date_dim`()
 BEGIN
   DECLARE max_key INT64;
   -- Determine current maximum date key
-  SET max_key = COALESCE((SELECT MAX(date_key) FROM `crypto_dw.date_dim`), 0);
+  SET max_key = COALESCE((SELECT MAX(date_key) FROM `{{ dataset }}.date_dim`), 0);
   -- Insert new dates not already present in the dimension
-  INSERT INTO `crypto_dw.date_dim` (
+  INSERT INTO `{{ dataset }}.date_dim` (
     date_key,
     date,
     year,
@@ -30,9 +30,9 @@ BEGIN
     CASE WHEN EXTRACT(DAYOFWEEK FROM r.snapshot_date) IN (1, 7) THEN TRUE ELSE FALSE END AS is_weekend
   FROM (
     SELECT DISTINCT snapshot_date
-    FROM `crypto_dw.crypto_raw_stage`
+    FROM `{{ dataset }}.crypto_raw_stage`
   ) AS r
-  LEFT JOIN `crypto_dw.date_dim` AS d
+  LEFT JOIN `{{ dataset }}.date_dim` AS d
     ON d.date = r.snapshot_date
   WHERE d.date IS NULL;
 END;

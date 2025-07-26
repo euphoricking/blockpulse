@@ -1,7 +1,7 @@
 -- Replace `{{ dataset }}` with your BigQuery dataset name before running this script.
 
 -- Staging table for raw snapshots
-CREATE TABLE IF NOT EXISTS `crypto_dw.crypto_raw_stage` (
+CREATE TABLE IF NOT EXISTS `{{ dataset }}.crypto_raw_stage` (
   coin_id STRING,
   symbol STRING,
   name STRING,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS `crypto_dw.crypto_raw_stage` (
 ) PARTITION BY snapshot_date;
 
 -- Dimension table: list of cryptocurrencies.  Surrogate key asset_key will be populated by stored procedure.
-CREATE TABLE IF NOT EXISTS `crypto_dw.crypto_asset_dim` (
+CREATE TABLE IF NOT EXISTS `{{ dataset }}.crypto_asset_dim` (
   asset_key INT64 NOT NULL,
   coin_id STRING NOT NULL,
   symbol STRING,
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS `crypto_dw.crypto_asset_dim` (
 );
 
 -- Dimension table: calendar dates.  Surrogate key date_key will be populated by stored procedure.
-CREATE TABLE IF NOT EXISTS `crypto_dw.date_dim` (
+CREATE TABLE IF NOT EXISTS `{{ dataset }}.date_dim` (
   date_key INT64 NOT NULL,
   date DATE NOT NULL,
   year INT64,
@@ -39,7 +39,7 @@ CREATE TABLE IF NOT EXISTS `crypto_dw.date_dim` (
 );
 
 -- Fact table capturing daily snapshot metrics.
-CREATE TABLE IF NOT EXISTS `crypto_dw.crypto_market_snapshot_fact` (
+CREATE TABLE IF NOT EXISTS `{{ dataset }}.crypto_market_snapshot_fact` (
   date_key INT64 NOT NULL,
   asset_key INT64 NOT NULL,
   price_usd FLOAT64,
