@@ -144,6 +144,10 @@ Once deployed and configured, the DAG will run automatically on schedule.  You c
 
 With the data loaded into the star schema, you can create dashboards in **Looker**, **Data Studio** or any BI tool that supports BigQuery.  Join the fact table to the dimension tables on `asset_key` and `date_key` to analyse price trends, market capitalisation and trading volumes over time.  Example queries are included in the comments of the `create_tables.sql` script.
 
+### 7. Dashboard
+
+The dashboard which was created with **Looker** can be accessed by clicking [here](https://lookerstudio.google.com/s/mcn2g1qssxA)
+
 ## Extending the Pipeline
 
 To adapt the pipeline for additional currencies, metrics or a different cloud provider:
@@ -154,4 +158,4 @@ To adapt the pipeline for additional currencies, metrics or a different cloud pr
 
 ## License
 
-This project is provided under the MIT License.  See the [LICENSE](../LICENSE) file for details.
+This project is provided under the MIT License.  See the [LICENSE](/LICENSE) file for details.
